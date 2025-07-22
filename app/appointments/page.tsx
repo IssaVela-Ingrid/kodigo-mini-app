@@ -1,7 +1,7 @@
 // app/appointments/page.tsx
 'use client'; // Necesario para usar Hooks de React y estado en componentes del lado del cliente
 
-import { useEffect, useState, FormEvent } from 'react';
+import { useEffect, useState, FormEvent, useCallback } from 'react'; // Agregamos useCallback
 import { collection, addDoc, getDocs } from 'firebase/firestore';
 import { db } from '../../lib/firebaseClient'; // RUTA CORREGIDA: Sube dos niveles (de appointments/ a app/, luego a la raíz) y luego entra en lib/
 
@@ -24,7 +24,8 @@ export default function AppointmentsPage() {
   const appointmentsCollectionRef = collection(db, 'appointments');
 
   // Función para obtener las citas de Firestore (GET endpoint)
-  const fetchAppointments = async () => {
+  // Usamos useCallback para memoizar fetchAppointments y evitar que cambie en cada render
+  const fetchAppointments = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -34,13 +35,14 @@ export default function AppointmentsPage() {
         id: doc.id,
       })).sort((a, b) => a.createdAt - b.createdAt); // Ordenar por fecha de creación
       setAppointments(appointmentsList);
-    } catch (err: any) { // ¡Cambiado de 'Error' a 'any' según la indicación de Netlify!
+    } catch (err: unknown) { // *** CAMBIO CLAVE: de 'any' a 'unknown' ***
       console.error('Error fetching appointments:', err);
-      setError(err.message);
+      // Cuando el error es 'unknown', debes verificar su tipo antes de acceder a propiedades como 'message'.
+      setError(err instanceof Error ? err.message : 'Ocurrió un error desconocido al cargar las citas.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [appointmentsCollectionRef]); // Añadimos 'appointmentsCollectionRef' como dependencia de useCallback
 
   // Función para añadir una nueva cita (POST endpoint)
   const addAppointment = async (e: FormEvent) => {
@@ -60,9 +62,10 @@ export default function AppointmentsPage() {
       setAppointmentTime('');
       fetchAppointments(); // Recarga la lista para ver la nueva cita
       setError(null); // Limpiar cualquier error previo
-    } catch (err: any) { // ¡Cambiado de 'Error' a 'any' según la indicación de Netlify!
+    } catch (err: unknown) { // *** CAMBIO CLAVE: de 'any' a 'unknown' ***
       console.error('Error adding appointment:', err);
-      setError(err.message);
+      // Cuando el error es 'unknown', debes verificar su tipo antes de acceder a propiedades como 'message'.
+      setError(err instanceof Error ? err.message : 'Ocurrió un error desconocido al añadir la cita.');
     }
   };
 

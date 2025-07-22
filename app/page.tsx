@@ -32,9 +32,10 @@ export default function Home() {
         id: document.id,
       })).sort((a, b) => a.created_at - b.created_at);
       setTodos(todosList);
-    } catch (err: any) { // *** ¡CORRECCIÓN FINAL: Cambiado de 'Error' a 'any'! ***
+    } catch (err: unknown) { // *** CAMBIO CLAVE: de 'any' a 'unknown' ***
       console.error('Error fetching todos:', err);
-      setError(err.message);
+      // Cuando el error es 'unknown', debes verificar su tipo antes de acceder a propiedades como 'message'.
+      setError(err instanceof Error ? err.message : 'Ocurrió un error desconocido al cargar las tareas.');
     } finally {
       setLoading(false);
     }
@@ -52,9 +53,10 @@ export default function Home() {
       });
       setNewTask('');
       fetchTodos();
-    } catch (err: any) { // *** ¡CORRECCIÓN FINAL: Cambiado de 'Error' a 'any'! ***
+      setError(null); // Limpiar cualquier error previo
+    } catch (err: unknown) { // *** CAMBIO CLAVE: de 'any' a 'unknown' ***
       console.error('Error adding todo:', err);
-      setError(err.message);
+      setError(err instanceof Error ? err.message : 'Ocurrió un error desconocido al añadir la tarea.');
     }
   };
 
@@ -65,9 +67,9 @@ export default function Home() {
         is_completed: !currentCompletion,
       });
       fetchTodos();
-    } catch (err: any) { // *** ¡CORRECCIÓN FINAL: Cambiado de 'Error' a 'any'! ***
+    } catch (err: unknown) { // *** CAMBIO CLAVE: de 'any' a 'unknown' ***
       console.error('Error updating todo:', err);
-      setError(err.message);
+      setError(err instanceof Error ? err.message : 'Ocurrió un error desconocido al actualizar la tarea.');
     }
   };
 
@@ -76,9 +78,9 @@ export default function Home() {
       const todoDoc = doc(db, 'todos', id);
       await deleteDoc(todoDoc);
       fetchTodos();
-    } catch (err: any) { // *** ¡CORRECCIÓN FINAL: Cambiado de 'Error' a 'any'! ***
+    } catch (err: unknown) { // *** CAMBIO CLAVE: de 'any' a 'unknown' ***
       console.error('Error deleting todo:', err);
-      setError(err.message);
+      setError(err instanceof Error ? err.message : 'Ocurrió un error desconocido al eliminar la tarea.');
     }
   };
 

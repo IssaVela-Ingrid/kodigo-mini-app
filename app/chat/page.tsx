@@ -39,9 +39,10 @@ export default function ChatPage() {
       });
       setMessages(fetchedMessages);
       setLoading(false); // Deja de cargar una vez que se obtienen los datos iniciales
-    }, (err: any) => { // *** CORRECCIÓN: Cambiado de 'Error' a 'any' ***
+    }, (err: unknown) => { // *** CAMBIO CLAVE: de 'any' a 'unknown' ***
       console.error('Error listening to messages:', err);
-      setError(err.message);
+      // Cuando el error es 'unknown', debes verificar su tipo antes de acceder a propiedades como 'message'.
+      setError(err instanceof Error ? err.message : 'Ocurrió un error desconocido al cargar los mensajes.');
       setLoading(false);
     });
 
@@ -62,9 +63,10 @@ export default function ChatPage() {
       });
       setNewMessageText(''); // Limpia el input del mensaje
       setError(null); // Limpiar cualquier error previo
-    } catch (err: any) { // *** CORRECCIÓN: Cambiado de 'Error' a 'any' ***
+    } catch (err: unknown) { // *** CAMBIO CLAVE: de 'any' a 'unknown' ***
       console.error('Error sending message:', err);
-      setError(err.message);
+      // Cuando el error es 'unknown', debes verificar su tipo antes de acceder a propiedades como 'message'.
+      setError(err instanceof Error ? err.message : 'Ocurrió un error desconocido al enviar el mensaje.');
     }
   };
 
