@@ -32,7 +32,7 @@ export default function Home() {
         id: document.id,
       })).sort((a, b) => a.created_at - b.created_at);
       setTodos(todosList);
-    } catch (err: Error) { // *** CORRECCIÓN: Cambiado de 'any' a 'Error' ***
+    } catch (err: any) { // *** ¡CORRECCIÓN FINAL: Cambiado de 'Error' a 'any'! ***
       console.error('Error fetching todos:', err);
       setError(err.message);
     } finally {
@@ -52,7 +52,7 @@ export default function Home() {
       });
       setNewTask('');
       fetchTodos();
-    } catch (err: Error) { // *** CORRECCIÓN: Cambiado de 'any' a 'Error' ***
+    } catch (err: any) { // *** ¡CORRECCIÓN FINAL: Cambiado de 'Error' a 'any'! ***
       console.error('Error adding todo:', err);
       setError(err.message);
     }
@@ -65,7 +65,7 @@ export default function Home() {
         is_completed: !currentCompletion,
       });
       fetchTodos();
-    } catch (err: Error) { // *** CORRECCIÓN: Cambiado de 'any' a 'Error' ***
+    } catch (err: any) { // *** ¡CORRECCIÓN FINAL: Cambiado de 'Error' a 'any'! ***
       console.error('Error updating todo:', err);
       setError(err.message);
     }
@@ -76,7 +76,7 @@ export default function Home() {
       const todoDoc = doc(db, 'todos', id);
       await deleteDoc(todoDoc);
       fetchTodos();
-    } catch (err: Error) { // *** CORRECCIÓN: Cambiado de 'any' a 'Error' ***
+    } catch (err: any) { // *** ¡CORRECCIÓN FINAL: Cambiado de 'Error' a 'any'! ***
       console.error('Error deleting todo:', err);
       setError(err.message);
     }
@@ -84,7 +84,7 @@ export default function Home() {
 
   useEffect(() => {
     fetchTodos();
-  }, [fetchTodos]); // *** CORRECCIÓN: Añadida 'fetchTodos' como dependencia ***
+  }, [fetchTodos]); // Añadida 'fetchTodos' como dependencia
 
   if (loading) return <p>Cargando tareas...</p>;
   if (error) return <p style={{ color: 'red' }}>Error: {error}</p>;

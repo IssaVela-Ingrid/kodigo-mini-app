@@ -34,7 +34,7 @@ export default function AppointmentsPage() {
         id: doc.id,
       })).sort((a, b) => a.createdAt - b.createdAt); // Ordenar por fecha de creación
       setAppointments(appointmentsList);
-    } catch (err: Error) { // *** CORRECCIÓN: Cambiado de 'any' a 'Error' ***
+    } catch (err: any) { // ¡Cambiado de 'Error' a 'any' según la indicación de Netlify!
       console.error('Error fetching appointments:', err);
       setError(err.message);
     } finally {
@@ -60,7 +60,7 @@ export default function AppointmentsPage() {
       setAppointmentTime('');
       fetchAppointments(); // Recarga la lista para ver la nueva cita
       setError(null); // Limpiar cualquier error previo
-    } catch (err: Error) { // *** CORRECCIÓN: Cambiado de 'any' a 'Error' ***
+    } catch (err: any) { // ¡Cambiado de 'Error' a 'any' según la indicación de Netlify!
       console.error('Error adding appointment:', err);
       setError(err.message);
     }
@@ -69,7 +69,7 @@ export default function AppointmentsPage() {
   // Cargar las citas al montar el componente
   useEffect(() => {
     fetchAppointments();
-  }, [fetchAppointments]); // *** CORRECCIÓN: Añadida 'fetchAppointments' como dependencia ***
+  }, [fetchAppointments]); // Añadida 'fetchAppointments' como dependencia
 
   if (loading) return <p>Cargando citas...</p>;
   if (error) return <p style={{ color: 'red' }}>Error: {error}</p>;

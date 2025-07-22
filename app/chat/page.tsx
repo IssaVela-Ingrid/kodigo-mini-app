@@ -39,7 +39,7 @@ export default function ChatPage() {
       });
       setMessages(fetchedMessages);
       setLoading(false); // Deja de cargar una vez que se obtienen los datos iniciales
-    }, (err: Error) => { // *** CORRECCIÓN: Cambiado de 'any' a 'Error' aquí ***
+    }, (err: any) => { // *** CORRECCIÓN: Cambiado de 'Error' a 'any' ***
       console.error('Error listening to messages:', err);
       setError(err.message);
       setLoading(false);
@@ -47,7 +47,7 @@ export default function ChatPage() {
 
     // Limpia el listener cuando el componente se desmonte para evitar fugas de memoria.
     return () => unsubscribe();
-  }, [messagesCollectionRef]); // *** CORRECCIÓN: Añadida 'messagesCollectionRef' como dependencia ***
+  }, [messagesCollectionRef]); // Añadida 'messagesCollectionRef' como dependencia
 
   // Función para enviar un nuevo mensaje.
   const sendMessage = async (e: FormEvent) => {
@@ -62,7 +62,7 @@ export default function ChatPage() {
       });
       setNewMessageText(''); // Limpia el input del mensaje
       setError(null); // Limpiar cualquier error previo
-    } catch (err: Error) { // *** CORRECCIÓN: Cambiado de 'any' a 'Error' aquí (esta sería la línea 72 del log si contamos desde el inicio del archivo) ***
+    } catch (err: any) { // *** CORRECCIÓN: Cambiado de 'Error' a 'any' ***
       console.error('Error sending message:', err);
       setError(err.message);
     }
