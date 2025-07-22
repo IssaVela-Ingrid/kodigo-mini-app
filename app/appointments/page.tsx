@@ -1,15 +1,15 @@
 // app/appointments/page.tsx
-'use client'; // Necesario para usar Hooks de React y estado en componentes del lado del cliente
+'use client';
 
-import { useEffect, useState, FormEvent, useCallback } from 'react'; // Agregamos useCallback
-import { collection, addDoc, getDocs } from 'firebase/firestore';
-import { db } from '../../lib/firebaseClient'; // RUTA CORREGIDA: Sube dos niveles (de appointments/ a app/, luego a la raíz) y luego entra en lib/
+import { useEffect, useState, FormEvent, useCallback } from 'react';
+// Importamos onSnapshot y orderBy
+import { collection, addDoc, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { db } from '../../lib/firebaseClient';
 
-// Define la interfaz para una cita
 interface Appointment {
   id: string;
   patientName: string;
-  appointmentTime: string; // Guardaremos la fecha y hora como string para simplicidad inicial
+  appointmentTime: string;
   createdAt: number;
 }
 
@@ -20,31 +20,34 @@ export default function AppointmentsPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Referencia a la colección 'appointments' en Firestore
   const appointmentsCollectionRef = collection(db, 'appointments');
 
-  // Función para obtener las citas de Firestore (GET endpoint)
-  // Usamos useCallback para memoizar fetchAppointments y evitar que cambie en cada render
-  const fetchAppointments = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await getDocs(appointmentsCollectionRef);
-      const appointmentsList: Appointment[] = data.docs.map((doc) => ({
-        ...(doc.data() as Omit<Appointment, 'id'>),
-        id: doc.id,
-      })).sort((a, b) => a.createdAt - b.createdAt); // Ordenar por fecha de creación
-      setAppointments(appointmentsList);
-    } catch (err: unknown) { // *** CAMBIO CLAVE: de 'any' a 'unknown' ***
-      console.error('Error fetching appointments:', err);
-      // Cuando el error es 'unknown', debes verificar su tipo antes de acceder a propiedades como 'message'.
-      setError(err instanceof Error ? err.message : 'Ocurrió un error desconocido al cargar las citas.');
-    } finally {
-      setLoading(false);
-    }
-  }, [appointmentsCollectionRef]); // Añadimos 'appointmentsCollectionRef' como dependencia de useCallback
+  // Ahora usaremos useEffect con onSnapshot para escuchar cambios en tiempo real
+  useEffect(() => {
+    // La consulta para obtener citas ordenadas por fecha de creación
+    const q = query(appointmentsCollectionRef, orderBy('createdAt', 'asc'));
 
-  // Función para añadir una nueva cita (POST endpoint)
+    // Configura el listener en tiempo real
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const appointmentsList: Appointment[] = [];
+      querySnapshot.forEach((doc) => {
+        appointmentsList.push({
+          ...(doc.data() as Omit<Appointment, 'id'>),
+          id: doc.id,
+        });
+      });
+      setAppointments(appointmentsList);
+      setLoading(false); // Deja de cargar una vez que se obtienen los datos iniciales
+    }, (err: unknown) => {
+      console.error('Error fetching appointments:', err);
+      setError(err instanceof Error ? err.message : 'Ocurrió un error desconocido al cargar las citas.');
+      setLoading(false);
+    });
+
+    // Limpia el listener cuando el componente se desmonte
+    return () => unsubscribe();
+  }, [appointmentsCollectionRef]);
+
   const addAppointment = async (e: FormEvent) => {
     e.preventDefault();
     if (patientName.trim() === '' || appointmentTime.trim() === '') {
@@ -60,19 +63,13 @@ export default function AppointmentsPage() {
       });
       setPatientName('');
       setAppointmentTime('');
-      fetchAppointments(); // Recarga la lista para ver la nueva cita
-      setError(null); // Limpiar cualquier error previo
-    } catch (err: unknown) { // *** CAMBIO CLAVE: de 'any' a 'unknown' ***
+      setError(null);
+      // Ya NO llamamos a fetchAppointments() aquí
+    } catch (err: unknown) {
       console.error('Error adding appointment:', err);
-      // Cuando el error es 'unknown', debes verificar su tipo antes de acceder a propiedades como 'message'.
       setError(err instanceof Error ? err.message : 'Ocurrió un error desconocido al añadir la cita.');
     }
   };
-
-  // Cargar las citas al montar el componente
-  useEffect(() => {
-    fetchAppointments();
-  }, [fetchAppointments]); // Añadida 'fetchAppointments' como dependencia
 
   if (loading) return <p>Cargando citas...</p>;
   if (error) return <p style={{ color: 'red' }}>Error: {error}</p>;
@@ -81,7 +78,6 @@ export default function AppointmentsPage() {
     <div style={{ padding: '20px', maxWidth: '800px', margin: 'auto', fontFamily: 'Arial, sans-serif' }}>
       <h1 style={{ textAlign: 'center', marginBottom: '30px', color: '#333' }}>Gestión de Citas Médicas</h1>
 
-      {/* Formulario para añadir citas */}
       <section style={{ marginBottom: '40px', border: '1px solid #eee', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}>
         <h2 style={{ marginBottom: '20px', color: '#007bff' }}>Agendar Nueva Cita</h2>
         <form onSubmit={addAppointment} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
@@ -90,7 +86,7 @@ export default function AppointmentsPage() {
             <input
               type="text"
               id="patientName"
-              name="patientName" // *** ¡NUEVO ATRIBUTO NAME! ***
+              name="patientName"
               value={patientName}
               onChange={(e) => setPatientName(e.target.value)}
               placeholder="Ej. Juan Pérez"
@@ -100,9 +96,9 @@ export default function AppointmentsPage() {
           <div>
             <label htmlFor="appointmentTime" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Fecha y Hora de Cita:</label>
             <input
-              type="datetime-local" // Tipo de input para fecha y hora
+              type="datetime-local"
               id="appointmentTime"
-              name="appointmentTime" // *** ¡NUEVO ATRIBUTO NAME! ***
+              name="appointmentTime"
               value={appointmentTime}
               onChange={(e) => setAppointmentTime(e.target.value)}
               style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '4px' }}
@@ -111,7 +107,7 @@ export default function AppointmentsPage() {
           <button
             type="submit"
             style={{
-              gridColumn: '1 / -1', // Ocupa ambas columnas
+              gridColumn: '1 / -1',
               padding: '12px 20px',
               backgroundColor: '#007bff',
               color: 'white',
@@ -127,7 +123,6 @@ export default function AppointmentsPage() {
         </form>
       </section>
 
-      {/* Lista de citas agendadas */}
       <section style={{ border: '1px solid #eee', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}>
         <h2 style={{ marginBottom: '20px', color: '#007bff' }}>Citas Agendadas</h2>
         {appointments.length === 0 ? (

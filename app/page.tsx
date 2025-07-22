@@ -1,9 +1,10 @@
 // app/page.tsx
-'use client'; // Necesario para usar Hooks de React y estado en componentes del lado del cliente de Next.js App Router
+'use client';
 
-import { useEffect, useState, FormEvent, useCallback } from 'react'; // Importamos useCallback
-import { collection, addDoc, getDocs, updateDoc, doc, deleteDoc } from 'firebase/firestore';
-import { db } from '../lib/firebaseClient'; // RUTA CORREGIDA: Sube un nivel (de app/ a la raíz) y luego entra en lib/
+import { useEffect, useState, FormEvent, useCallback } from 'react';
+// Importamos onSnapshot y orderBy para el listener en tiempo real
+import { collection, addDoc, doc, deleteDoc, updateDoc, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { db } from '../lib/firebaseClient';
 
 interface Todo {
   id: string;
@@ -20,30 +21,38 @@ export default function Home() {
 
   const todosCollectionRef = collection(db, 'todos');
 
-  // Usamos useCallback para memoizar fetchTodos y evitar que cambie en cada render
-  // Esto nos permite añadirla como dependencia en useEffect sin causar bucles infinitos.
-  const fetchTodos = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await getDocs(todosCollectionRef);
-      const todosList: Todo[] = data.docs.map((document) => ({ // Renombrado 'doc' a 'document' para evitar conflicto
-        ...(document.data() as Omit<Todo, 'id'>),
-        id: document.id,
-      })).sort((a, b) => a.created_at - b.created_at);
+  // Ahora usaremos useEffect con onSnapshot para escuchar cambios en tiempo real
+  useEffect(() => {
+    // La consulta para obtener tareas ordenadas por fecha de creación
+    const q = query(todosCollectionRef, orderBy('created_at', 'asc'));
+
+    // Configura el listener en tiempo real
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const todosList: Todo[] = [];
+      querySnapshot.forEach((document) => {
+        todosList.push({
+          ...(document.data() as Omit<Todo, 'id'>),
+          id: document.id,
+        });
+      });
       setTodos(todosList);
-    } catch (err: unknown) { // *** CAMBIO CLAVE: de 'any' a 'unknown' ***
-      console.error('Error fetching todos:', err);
-      // Cuando el error es 'unknown', debes verificar su tipo antes de acceder a propiedades como 'message'.
+      setLoading(false); // Deja de cargar una vez que se obtienen los datos iniciales
+    }, (err: unknown) => {
+      console.error('Error listening to todos:', err);
       setError(err instanceof Error ? err.message : 'Ocurrió un error desconocido al cargar las tareas.');
-    } finally {
       setLoading(false);
-    }
-  }, [todosCollectionRef]); // 'todosCollectionRef' es una dependencia para useCallback
+    });
+
+    // Limpia el listener cuando el componente se desmonte para evitar fugas de memoria.
+    return () => unsubscribe();
+  }, [todosCollectionRef]); // La dependencia es solo la referencia a la colección
 
   const addTodo = async (e: FormEvent) => {
     e.preventDefault();
-    if (newTask.trim() === '') return;
+    if (newTask.trim() === '') {
+      setError("La tarea no puede estar vacía.");
+      return;
+    }
 
     try {
       await addDoc(todosCollectionRef, {
@@ -51,10 +60,10 @@ export default function Home() {
         is_completed: false,
         created_at: Date.now(),
       });
-      setNewTask('');
-      fetchTodos();
+      setNewTask(''); // Limpia el input
       setError(null); // Limpiar cualquier error previo
-    } catch (err: unknown) { // *** CAMBIO CLAVE: de 'any' a 'unknown' ***
+      // Ya NO llamamos a fetchTodos() aquí porque onSnapshot lo hace automáticamente
+    } catch (err: unknown) {
       console.error('Error adding todo:', err);
       setError(err instanceof Error ? err.message : 'Ocurrió un error desconocido al añadir la tarea.');
     }
@@ -66,8 +75,9 @@ export default function Home() {
       await updateDoc(todoDoc, {
         is_completed: !currentCompletion,
       });
-      fetchTodos();
-    } catch (err: unknown) { // *** CAMBIO CLAVE: de 'any' a 'unknown' ***
+      setError(null);
+      // Ya NO llamamos a fetchTodos() aquí
+    } catch (err: unknown) {
       console.error('Error updating todo:', err);
       setError(err instanceof Error ? err.message : 'Ocurrió un error desconocido al actualizar la tarea.');
     }
@@ -77,16 +87,13 @@ export default function Home() {
     try {
       const todoDoc = doc(db, 'todos', id);
       await deleteDoc(todoDoc);
-      fetchTodos();
-    } catch (err: unknown) { // *** CAMBIO CLAVE: de 'any' a 'unknown' ***
+      setError(null);
+      // Ya NO llamamos a fetchTodos() aquí
+    } catch (err: unknown) {
       console.error('Error deleting todo:', err);
       setError(err instanceof Error ? err.message : 'Ocurrió un error desconocido al eliminar la tarea.');
     }
   };
-
-  useEffect(() => {
-    fetchTodos();
-  }, [fetchTodos]); // Añadida 'fetchTodos' como dependencia
 
   if (loading) return <p>Cargando tareas...</p>;
   if (error) return <p style={{ color: 'red' }}>Error: {error}</p>;
@@ -98,8 +105,8 @@ export default function Home() {
       <form onSubmit={addTodo} style={{ display: 'flex', marginBottom: '20px', gap: '10px' }}>
         <input
           type="text"
-          id="newTask" // Ya lo tenías
-          name="newTask" // <--- ¡ÚNICA ADICIÓN AQUÍ!
+          id="newTask"
+          name="newTask"
           value={newTask}
           onChange={(e) => setNewTask(e.target.value)}
           placeholder="Añadir nueva tarea..."
