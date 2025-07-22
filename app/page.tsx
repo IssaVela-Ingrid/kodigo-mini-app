@@ -1,7 +1,7 @@
 // app/page.tsx
 'use client'; // Necesario para usar Hooks de React y estado en componentes del lado del cliente de Next.js App Router
 
-import { useEffect, useState, FormEvent } from 'react';
+import { useEffect, useState, FormEvent, useCallback } from 'react'; // Importamos useCallback
 import { collection, addDoc, getDocs, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebaseClient'; // RUTA CORREGIDA: Sube un nivel (de app/ a la raíz) y luego entra en lib/
 
@@ -20,23 +20,25 @@ export default function Home() {
 
   const todosCollectionRef = collection(db, 'todos');
 
-  const fetchTodos = async () => {
+  // Usamos useCallback para memoizar fetchTodos y evitar que cambie en cada render
+  // Esto nos permite añadirla como dependencia en useEffect sin causar bucles infinitos.
+  const fetchTodos = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const data = await getDocs(todosCollectionRef);
-      const todosList: Todo[] = data.docs.map((doc) => ({
-        ...(doc.data() as Omit<Todo, 'id'>),
-        id: doc.id,
+      const todosList: Todo[] = data.docs.map((document) => ({ // Renombrado 'doc' a 'document' para evitar conflicto
+        ...(document.data() as Omit<Todo, 'id'>),
+        id: document.id,
       })).sort((a, b) => a.created_at - b.created_at);
       setTodos(todosList);
-    } catch (err: any) {
+    } catch (err: Error) { // *** CORRECCIÓN: Cambiado de 'any' a 'Error' ***
       console.error('Error fetching todos:', err);
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [todosCollectionRef]); // 'todosCollectionRef' es una dependencia para useCallback
 
   const addTodo = async (e: FormEvent) => {
     e.preventDefault();
@@ -50,7 +52,7 @@ export default function Home() {
       });
       setNewTask('');
       fetchTodos();
-    } catch (err: any) {
+    } catch (err: Error) { // *** CORRECCIÓN: Cambiado de 'any' a 'Error' ***
       console.error('Error adding todo:', err);
       setError(err.message);
     }
@@ -63,7 +65,7 @@ export default function Home() {
         is_completed: !currentCompletion,
       });
       fetchTodos();
-    } catch (err: any) {
+    } catch (err: Error) { // *** CORRECCIÓN: Cambiado de 'any' a 'Error' ***
       console.error('Error updating todo:', err);
       setError(err.message);
     }
@@ -74,7 +76,7 @@ export default function Home() {
       const todoDoc = doc(db, 'todos', id);
       await deleteDoc(todoDoc);
       fetchTodos();
-    } catch (err: any) {
+    } catch (err: Error) { // *** CORRECCIÓN: Cambiado de 'any' a 'Error' ***
       console.error('Error deleting todo:', err);
       setError(err.message);
     }
@@ -82,7 +84,7 @@ export default function Home() {
 
   useEffect(() => {
     fetchTodos();
-  }, []);
+  }, [fetchTodos]); // *** CORRECCIÓN: Añadida 'fetchTodos' como dependencia ***
 
   if (loading) return <p>Cargando tareas...</p>;
   if (error) return <p style={{ color: 'red' }}>Error: {error}</p>;
