@@ -98,6 +98,8 @@ export default function Home() {
       <form onSubmit={addTodo} style={{ display: 'flex', marginBottom: '20px', gap: '10px' }}>
         <input
           type="text"
+          id="newTask" // Ya lo tenías
+          name="newTask" // <--- ¡ÚNICA ADICIÓN AQUÍ!
           value={newTask}
           onChange={(e) => setNewTask(e.target.value)}
           placeholder="Añadir nueva tarea..."

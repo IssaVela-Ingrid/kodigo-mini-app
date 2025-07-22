@@ -90,6 +90,7 @@ export default function AppointmentsPage() {
             <input
               type="text"
               id="patientName"
+              name="patientName" // *** ¡NUEVO ATRIBUTO NAME! ***
               value={patientName}
               onChange={(e) => setPatientName(e.target.value)}
               placeholder="Ej. Juan Pérez"
@@ -101,6 +102,7 @@ export default function AppointmentsPage() {
             <input
               type="datetime-local" // Tipo de input para fecha y hora
               id="appointmentTime"
+              name="appointmentTime" // *** ¡NUEVO ATRIBUTO NAME! ***
               value={appointmentTime}
               onChange={(e) => setAppointmentTime(e.target.value)}
               style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '4px' }}
